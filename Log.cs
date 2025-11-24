@@ -9,9 +9,9 @@ namespace Lesson
         {
             Pathfinder fileLogger = new Pathfinder(new FileLogWriter());
             Pathfinder consoleLogger = new Pathfinder(new ConsoleLogWriter());
-            Pathfinder fileLoggerOnFridays = new Pathfinder(new SecureFileLogWriter());
-            Pathfinder consoleLoggerOnFridays = new Pathfinder(new SecureConsoleLogWriter());
-            Pathfinder consoleAndFileLoggerOnFridays = new Pathfinder(new CombinedSecureLogWriter());
+            Pathfinder fileLoggerOnFridays = new Pathfinder(new SecureLogWriter(new FileLogWriter()));
+            Pathfinder consoleLoggerOnFridays = new Pathfinder(new SecureLogWriter(new ConsoleLogWriter()));
+            Pathfinder consoleAndFileLoggerOnFridays = new Pathfinder(new CombinedLogWriter(new ConsoleLogWriter(), new FileLogWriter()));
 
             fileLogger.Find("В файл");
             consoleLogger.Find("В консоль");
@@ -42,46 +42,42 @@ namespace Lesson
         }
     }
 
-    class SecureConsoleLogWriter : ConsoleLogWriter
+    class SecureLogWriter : ILogger
     {
-        public override void WriteError(string message)
-        {
-            if (DateTime.Now.DayOfWeek == DayOfWeek.Friday)
-            {
-                base.WriteError(message);
-            }
-        }
-    }
+        private readonly ILogger _innerLogger;
 
-    class SecureFileLogWriter : FileLogWriter
-    {
-        public override void WriteError(string message)
+        public SecureLogWriter(ILogger innerLogger)
         {
-            if (DateTime.Now.DayOfWeek == DayOfWeek.Friday)
-            {
-                base.WriteError(message);
-            }
-        }
-    }
-
-    class CombinedSecureLogWriter : ILogger
-    {
-        private readonly ConsoleLogWriter _consoleLogWriter;
-        private readonly FileLogWriter _fileLogWriter;
-
-        public CombinedSecureLogWriter()
-        {
-            _consoleLogWriter = new ConsoleLogWriter();
-            _fileLogWriter = new FileLogWriter();
+            _innerLogger = innerLogger;
         }
 
         public void WriteError(string message)
         {
-            _consoleLogWriter.WriteError(message);
+            if (DateTime.Now.DayOfWeek == DayOfWeek.Friday)
+            {
+                _innerLogger.WriteError(message);
+            }
+        }
+    }
+
+    class CombinedLogWriter : ILogger
+    {
+        private readonly ILogger _consoleLogger;
+        private readonly ILogger _fileLogger;
+
+        public CombinedLogWriter(ILogger consoleLogger, ILogger fileLogger)
+        {
+            _consoleLogger = consoleLogger;
+            _fileLogger = fileLogger;
+        }
+
+        public void WriteError(string message)
+        {
+            _consoleLogger.WriteError(message);
 
             if (DateTime.Now.DayOfWeek == DayOfWeek.Friday)
             {
-                _fileLogWriter.WriteError(message);
+                _fileLogger.WriteError(message);
             }
         }
     }
